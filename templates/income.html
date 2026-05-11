@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block title %}Income{% endblock %}
+{% block page_title %}Income History{% endblock %}
+
+{% block content %}
+<div style="display:flex;justify-content:flex-end;margin-bottom:20px;">
+  <a href="{{ url_for('add_income') }}" class="btn btn-success">➕ Add Income</a>
+</div>
+
+<div class="table-card">
+  <div class="table-header">
+    <span class="table-title">💵 Income Records
+      <span class="badge badge-muted" style="margin-left:8px;">{{ incomes|length }}</span>
+    </span>
+  </div>
+
+  {% if incomes %}
+  <div style="overflow-x:auto;">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Date</th>
+          <th>Source</th>
+          <th class="text-right">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for i in incomes %}
+        <tr>
+          <td style="color:var(--text-dim);">{{ loop.index }}</td>
+          <td style="color:var(--text-muted);">{{ i.date.strftime('%d %b %Y') }}</td>
+          <td>{{ i.source or '—' }}</td>
+          <td class="text-success text-right" style="font-weight:700;">₹{{ "%.2f"|format(i.amount) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="icon">💵</div>
+    <p>No income records yet. <a href="{{ url_for('add_income') }}">Add your first entry.</a></p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+{% block title %}Expenses{% endblock %}
+{% block page_title %}My Expenses{% endblock %}
+
+{% block content %}
+
+<!-- Filters -->
+<form method="GET" class="filters">
+  <div class="form-group">
+    <label class="form-label">Search</label>
+    <input class="form-control" name="search" placeholder="Description…" value="{{ search }}" style="width:180px;">
+  </div>
+  <div class="form-group">
+    <label class="form-label">Category</label>
+    <select class="form-control" name="category" style="width:160px;">
+      <option value="">All Categories</option>
+      {% for c in categories %}<option value="{{ c }}" {% if c == category %}selected{% endif %}>{{ c }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="form-group">
+    <label class="form-label">From</label>
+    <input class="form-control" type="date" name="start" value="{{ start }}" style="width:150px;">
+  </div>
+  <div class="form-group">
+    <label class="form-label">To</label>
+    <input class="form-control" type="date" name="end" value="{{ end }}" style="width:150px;">
+  </div>
+  <div class="form-group" style="align-self:flex-end;">
+    <button class="btn btn-primary" type="submit">🔍 Filter</button>
+    <a href="{{ url_for('expenses') }}" class="btn btn-ghost">Clear</a>
+  </div>
+  <div class="ml-auto" style="align-self:flex-end;">
+    <a href="{{ url_for('add_expense') }}" class="btn btn-success">➕ Add Expense</a>
+    <a href="{{ url_for('export_pdf') }}" class="btn btn-ghost">📄 PDF</a>
+  </div>
+</form>
+
+<!-- Charts for current filter results -->
+{% if expenses %}
+<div class="charts-row" style="margin-bottom:24px;">
+  <div class="chart-card">
+    <div class="chart-title">🍩 Category Breakdown — Current View</div>
+    <canvas id="expCatChart" height="220"></canvas>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">📊 Daily Spending — Current View</div>
+    <canvas id="expDailyChart" height="220"></canvas>
+  </div>
+</div>
+{% endif %}
+
+<!-- Table -->
+<div class="table-card">
+  <div class="table-header">
+    <span class="table-title">💸 Expense History
+      <span class="badge badge-muted" style="margin-left:8px;">{{ expenses|length }}</span>
+    </span>
+    <span style="color:var(--text-muted);font-size:13px;">
+      Total: <strong class="text-danger">₹{{ "%.2f"|format(expenses|sum(attribute='amount')) }}</strong>
+    </span>
+  </div>
+
+  {% if expenses %}
+  <div style="overflow-x:auto;">
+    <table>
+      <thead>
+        <tr><th>#</th><th>Date</th><th>Category</th><th>Description</th><th class="text-right">Amount</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for e in expenses %}
+        <tr>
+          <td style="color:var(--text-dim);">{{ loop.index }}</td>
+          <td style="color:var(--text-muted);">{{ e.date.strftime('%d %b %Y') }}</td>
+          <td><span class="badge badge-primary">{{ e.category }}</span></td>
+          <td>{{ e.description or '—' }}</td>
+          <td class="text-danger text-right" style="font-weight:700;">₹{{ "%.2f"|format(e.amount) }}</td>
+          <td>
+            <div class="flex gap-2">
+              <a href="{{ url_for('edit_expense', eid=e.id) }}" class="btn btn-warning btn-sm btn-icon" title="Edit">✏️</a>
+              <form method="POST" action="{{ url_for('delete_expense', eid=e.id) }}"
+                    onsubmit="return confirm('Delete this expense?');" style="display:inline;">
+                <button class="btn btn-danger btn-sm btn-icon" type="submit" title="Delete">🗑️</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="icon">🔍</div>
+    <p>No expenses found. <a href="{{ url_for('add_expense') }}">Add one!</a></p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if expenses %}
+<script>
+  const PAL = ['#6c63ff','#f59e0b','#10b981','#ef4444','#3b82f6','#a855f7','#ec4899','#14b8a6','#f97316','#06b6d4','#84cc16','#e11d48'];
+  const gridColor = 'rgba(255,255,255,.06)';
+  const tickColor = '#9796b8';
+
+  // Build category data from table
+  const rawData = [
+    {% for e in expenses %}
+    { cat: "{{ e.category }}", amount: {{ e.amount }}, date: "{{ e.date.strftime('%d %b') }}" },
+    {% endfor %}
+  ];
+
+  // Category totals
+  const catMap = {};
+  rawData.forEach(r => { catMap[r.cat] = (catMap[r.cat] || 0) + r.amount; });
+  const catKeys = Object.keys(catMap);
+  const catVals = catKeys.map(k => Math.round(catMap[k] * 100) / 100);
+
+  new Chart(document.getElementById('expCatChart'), {
+    type: 'doughnut',
+    data: { labels: catKeys, datasets: [{ data: catVals, backgroundColor: PAL, borderWidth: 0, hoverOffset: 10 }] },
+    options: {
+      responsive: true, cutout: '60%',
+      animation: { duration: 700 },
+      plugins: {
+        legend: { position: 'right', labels: { color: tickColor, font: { size: 12 }, padding: 12 } },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ₹${ctx.parsed.toLocaleString()}` } }
+      }
+    }
+  });
+
+  // Daily totals
+  const dayMap = {};
+  rawData.forEach(r => { dayMap[r.date] = (dayMap[r.date] || 0) + r.amount; });
+  const dayKeys = Object.keys(dayMap).reverse();
+  const dayVals = dayKeys.map(k => Math.round(dayMap[k] * 100) / 100);
+
+  new Chart(document.getElementById('expDailyChart'), {
+    type: 'bar',
+    data: {
+      labels: dayKeys,
+      datasets: [{ label: 'Daily Total (₹)', data: dayVals,
+        backgroundColor: PAL[0] + '88', borderColor: PAL[0], borderWidth: 2, borderRadius: 6 }]
+    },
+    options: {
+      responsive: true, animation: { duration: 700 },
+      plugins: { legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ' ₹' + ctx.parsed.y.toLocaleString() } } },
+      scales: {
+        x: { grid: { color: gridColor }, ticks: { color: tickColor } },
+        y: { grid: { color: gridColor }, ticks: { color: tickColor, callback: v => '₹' + v } }
+      }
+    }
+  });
+</script>
+{% endif %}
+{% endblock %}

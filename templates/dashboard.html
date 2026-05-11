@@ -1,0 +1,336 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+
+<!-- ── Two-row filter bar ──────────────────────────────────────────────────── -->
+<div class="period-bar" style="flex-direction:column;gap:10px;padding:12px 16px;margin-bottom:14px;">
+
+  <!-- Row 1: Member selector -->
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;width:100%;">
+    <span style="font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em;margin-right:4px;">View:</span>
+
+    <!-- Family (all) pill -->
+    <a href="{{ url_for('dashboard', period=period, month=month, year=year, quarter=quarter, member_id='family') }}"
+       class="member-pill {% if member_id == 'family' %}active-family{% endif %}">
+      👨‍👩‍👧 Family
+    </a>
+
+    <!-- Individual member pills -->
+    {% for m in all_members %}
+    <a href="{{ url_for('dashboard', period=period, month=month, year=year, quarter=quarter, member_id=m.id) }}"
+       class="member-pill {% if member_id == m.id|string %}active-member{% endif %}"
+       style="{% if member_id == m.id|string %}--member-color:{{ ['#6c63ff','#f59e0b','#10b981','#ef4444','#3b82f6','#a855f7'][loop.index0 % 6] }};{% endif %}">
+      <span class="member-avatar-sm">{{ m.username[0].upper() }}</span>
+      {{ m.username }}
+      {% if member_id == 'family' %}
+      <span class="member-spend-badge">₹{{ "%.0f"|format(member_totals_raw[loop.index0] if member_totals_raw else 0) }}</span>
+      {% endif %}
+    </a>
+    {% endfor %}
+
+    <span style="margin-left:auto;font-size:12px;font-weight:700;color:var(--text-muted);">
+      {{ view_label }}
+    </span>
+  </div>
+
+  <!-- Row 2: Period tabs + sub-selectors -->
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;width:100%;">
+    <span style="font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em;margin-right:4px;">Period:</span>
+    <div class="period-tabs">
+      {% for p, label in [('daily','📅 Today'),('monthly','📆 Monthly'),('quarterly','📊 Quarterly'),('yearly','📈 Yearly'),('all','🗂 All')] %}
+      <a href="{{ url_for('dashboard', period=p, member_id=member_id,
+          month=month if p=='monthly' else None,
+          year=year if p in ['quarterly','yearly'] else None,
+          quarter=quarter if p=='quarterly' else None) }}"
+         class="period-tab {% if period==p %}active{% endif %}">{{ label }}</a>
+      {% endfor %}
+    </div>
+
+    {% if period == 'monthly' %}
+    <form method="GET" class="period-sub">
+      <input type="hidden" name="period" value="monthly">
+      <input type="hidden" name="member_id" value="{{ member_id }}">
+      <input class="form-control" type="month" name="month" value="{{ month }}" style="width:160px;" onchange="this.form.submit()">
+    </form>
+    {% elif period == 'quarterly' %}
+    <form method="GET" class="period-sub">
+      <input type="hidden" name="period" value="quarterly">
+      <input type="hidden" name="member_id" value="{{ member_id }}">
+      <select class="form-control" name="year" style="width:100px;" onchange="this.form.submit()">
+        {% for y in range(2020,2028) %}<option value="{{ y }}" {% if y|string==year %}selected{% endif %}>{{ y }}</option>{% endfor %}
+      </select>
+      <select class="form-control" name="quarter" style="width:130px;" onchange="this.form.submit()">
+        {% for q,ql in [(1,'Q1 Jan–Mar'),(2,'Q2 Apr–Jun'),(3,'Q3 Jul–Sep'),(4,'Q4 Oct–Dec')] %}
+        <option value="{{ q }}" {% if q|string==quarter %}selected{% endif %}>{{ ql }}</option>
+        {% endfor %}
+      </select>
+    </form>
+    {% elif period == 'yearly' %}
+    <form method="GET" class="period-sub">
+      <input type="hidden" name="period" value="yearly">
+      <input type="hidden" name="member_id" value="{{ member_id }}">
+      <select class="form-control" name="year" style="width:100px;" onchange="this.form.submit()">
+        {% for y in range(2020,2028) %}<option value="{{ y }}" {% if y|string==year %}selected{% endif %}>{{ y }}</option>{% endfor %}
+      </select>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ── Stat Cards ──────────────────────────────────────────────────────────── -->
+<div class="stats-grid" style="margin-bottom:14px;">
+  <div class="stat-card income">
+    <div class="stat-icon" style="width:34px;height:34px;font-size:15px;">💵</div>
+    <div class="stat-label">Income</div>
+    <div class="stat-value positive" style="font-size:19px;">₹{{ "%.2f"|format(total_income) }}</div>
+    <div class="stat-sub">{{ view_label }}</div>
+  </div>
+  <div class="stat-card expense">
+    <div class="stat-icon" style="width:34px;height:34px;font-size:15px;">💸</div>
+    <div class="stat-label">Expenses</div>
+    <div class="stat-value negative" style="font-size:19px;">₹{{ "%.2f"|format(total_expense) }}</div>
+    <div class="stat-sub">{{ view_label }}</div>
+  </div>
+  <div class="stat-card saved">
+    <div class="stat-icon" style="width:34px;height:34px;font-size:15px;">🏦</div>
+    <div class="stat-label">Savings</div>
+    <div class="stat-value positive" style="font-size:19px;">₹{{ "%.2f"|format(total_savings) }}</div>
+    <div class="stat-sub">{{ view_label }}</div>
+  </div>
+  <div class="stat-card balance">
+    <div class="stat-icon" style="width:34px;height:34px;font-size:15px;">⚖️</div>
+    <div class="stat-label">Balance</div>
+    <div class="stat-value {% if balance>=0 %}positive{% else %}negative{% endif %}" style="font-size:19px;">₹{{ "%.2f"|format(balance) }}</div>
+    <div class="stat-sub">Inc − Exp − Sav</div>
+  </div>
+  <div class="stat-card today">
+    <div class="stat-icon" style="width:34px;height:34px;font-size:15px;">📅</div>
+    <div class="stat-label">Today</div>
+    <div class="stat-value negative" style="font-size:19px;">₹{{ "%.2f"|format(today_exp) }}</div>
+    <div class="stat-sub">{{ now.strftime('%d %b') }}</div>
+  </div>
+  <div class="stat-card month-card">
+    <div class="stat-icon" style="width:34px;height:34px;font-size:15px;">🗓️</div>
+    <div class="stat-label">This Month</div>
+    <div class="stat-value negative" style="font-size:19px;">₹{{ "%.2f"|format(month_exp) }}</div>
+    <div class="stat-sub">{{ now.strftime('%b %Y') }}</div>
+  </div>
+</div>
+
+<!-- ── Charts Row 1 (3 across) ────────────────────────────────────────────── -->
+<div class="charts-grid3" style="margin-bottom:12px;">
+
+  <div class="chart-card-sm">
+    <div class="chart-title-sm">
+      {% if period=='daily' %}🍩 Today by Category
+      {% elif period=='monthly' %}📊 Daily — {{ month }}
+      {% elif period=='quarterly' %}📊 Q{{ quarter }} {{ year }}
+      {% elif period=='yearly' %}📊 {{ year }} Monthly
+      {% else %}📊 Year-over-Year{% endif %}
+    </div>
+    {% if chart_data_raw %}
+    <canvas id="mainChart"></canvas>
+    {% else %}<div class="chart-empty">No data for this period</div>{% endif %}
+  </div>
+
+  <div class="chart-card-sm">
+    <div class="chart-title-sm">🍩 Category Breakdown</div>
+    {% if cat_data_raw %}
+    <canvas id="catChart"></canvas>
+    {% else %}<div class="chart-empty">No categories yet</div>{% endif %}
+  </div>
+
+  <div class="chart-card-sm">
+    <div class="chart-title-sm">📆 Last 12 Months</div>
+    <canvas id="m12Chart"></canvas>
+  </div>
+
+</div>
+
+<!-- ── Charts Row 2 ────────────────────────────────────────────────────────── -->
+<div class="charts-row" style="margin-bottom:12px;">
+
+  <div class="chart-card-sm">
+    <div class="chart-title-sm">⚖️ Inc vs Exp vs Savings — {{ now.year }}</div>
+    <canvas id="compareChart"></canvas>
+  </div>
+
+  {% if has_member_chart %}
+  <!-- Family view: show member breakdown chart -->
+  <div class="chart-card-sm">
+    <div class="chart-title-sm">👨‍👩‍👧 Member-wise Spending (Period)</div>
+    <canvas id="memberChart"></canvas>
+  </div>
+  {% else %}
+  <!-- Individual view: all-time category bar -->
+  <div class="chart-card-sm">
+    <div class="chart-title-sm">📋 All-Time by Category</div>
+    {% if alltime_cat_labels_raw %}
+    <canvas id="catBarChart"></canvas>
+    {% else %}<div class="chart-empty">No expenses yet</div>{% endif %}
+  </div>
+  {% endif %}
+
+</div>
+
+<!-- ── Row 3: All-time category (family) OR member cards ─────────────────── -->
+{% if has_member_chart %}
+<div class="charts-row" style="margin-bottom:12px;">
+  <div class="chart-card-sm">
+    <div class="chart-title-sm">📋 All-Time by Category (Family)</div>
+    {% if alltime_cat_labels_raw %}
+    <canvas id="catBarChart"></canvas>
+    {% else %}<div class="chart-empty">No expenses yet</div>{% endif %}
+  </div>
+
+  <!-- Member breakdown cards -->
+  <div class="chart-card-sm" style="display:flex;flex-direction:column;gap:8px;">
+    <div class="chart-title-sm">👤 Individual Member Summary (Period)</div>
+    {% for m in all_members %}
+    <div class="member-summary-row">
+      <div class="member-avatar-md">{{ m.username[0].upper() }}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:700;">{{ m.username }}</div>
+        <div class="member-bar-bg">
+          <div class="member-bar-fill" style="width:{{ ((member_totals_raw[loop.index0] / (member_totals_raw|max or 1)) * 100)|round }}%;"></div>
+        </div>
+      </div>
+      <div style="text-align:right;flex-shrink:0;">
+        <div class="text-danger" style="font-size:13px;font-weight:800;">₹{{ "%.0f"|format(member_totals_raw[loop.index0]) }}</div>
+        <div style="font-size:10px;color:var(--text-dim);">Today ₹{{ "%.0f"|format(member_today_raw[loop.index0]) }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- ── Recent Transactions ─────────────────────────────────────────────────── -->
+<div class="table-card">
+  <div class="table-header" style="padding:10px 18px;">
+    <span class="table-title" style="font-size:13px;">🕒 Recent Transactions — {{ view_label }}</span>
+    <a href="{{ url_for('expenses') }}" class="btn btn-ghost btn-sm">View All →</a>
+  </div>
+  {% if recent %}
+  <div style="overflow-x:auto;">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          {% if is_family %}<th>Member</th>{% endif %}
+          <th>Category</th><th>Description</th><th class="text-right">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in recent[:8] %}
+        <tr>
+          <td style="color:var(--text-muted);font-size:12px;white-space:nowrap;">{{ e.date.strftime('%d %b %Y') }}</td>
+          {% if is_family %}
+          <td>
+            <span style="font-size:12px;font-weight:600;">
+              {{ e.owner.username if e.owner else '?' }}
+            </span>
+          </td>
+          {% endif %}
+          <td><span class="badge badge-primary">{{ e.category }}</span></td>
+          <td style="font-size:12px;">{{ e.description or '—' }}</td>
+          <td class="text-danger text-right" style="font-weight:700;font-size:13px;">₹{{ "%.2f"|format(e.amount) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state" style="padding:24px;">
+    <div class="icon" style="font-size:30px;">💳</div>
+    <p>No transactions for this view. <a href="{{ url_for('add_expense') }}">Add one →</a></p>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const PAL = ['#6c63ff','#f59e0b','#10b981','#ef4444','#3b82f6','#a855f7','#ec4899','#14b8a6','#f97316','#06b6d4','#84cc16','#e11d48'];
+const gc  = 'rgba(255,255,255,.05)', tc = '#9796b8';
+
+const tip = {
+  backgroundColor:'rgba(20,18,35,.96)', borderColor:'rgba(108,99,255,.4)', borderWidth:1,
+  titleColor:'#e8e6ff', bodyColor:'#9796b8', padding:10, cornerRadius:8,
+  callbacks:{ label: ctx => { const v=ctx.parsed?.y??ctx.parsed; return ` ₹${Number(v).toLocaleString('en-IN',{minimumFractionDigits:2})}`; } }
+};
+const scl = {
+  x:{grid:{color:gc},ticks:{color:tc,font:{size:10}}},
+  y:{grid:{color:gc},ticks:{color:tc,font:{size:10},callback:v=>'₹'+(v>=1000?(v/1000).toFixed(1)+'k':v)}}
+};
+const anim = {duration:600,easing:'easeInOutQuart'};
+const leg  = (pos='right')=>({position:pos,labels:{color:tc,font:{size:11},padding:10,boxWidth:12}});
+
+/* Chart 1 – period trend */
+const mL={{ chart_labels|safe }},mD={{ chart_data|safe }},cT='{{ chart_type }}';
+if(mL.length&&document.getElementById('mainChart'))
+  new Chart('mainChart',{type:cT,data:{labels:mL,datasets:[{label:'Expenses',data:mD,
+    backgroundColor:cT==='doughnut'?PAL:PAL[0]+'55',borderColor:cT==='doughnut'?PAL:PAL[0],
+    borderWidth:cT==='doughnut'?0:2,borderRadius:cT==='bar'?6:0,
+    hoverBackgroundColor:cT==='doughnut'?PAL.map(c=>c+'cc'):PAL[0]+'aa',
+    hoverOffset:10,tension:.4,pointRadius:3,pointHoverRadius:6}]},
+  options:{responsive:true,maintainAspectRatio:true,animation:anim,
+    plugins:{legend:{display:cT==='doughnut',...leg()},tooltip:{...tip}},
+    cutout:cT==='doughnut'?'60%':undefined,scales:cT!=='doughnut'?scl:{}}});
+
+/* Chart 2 – category doughnut */
+const cL={{ cat_labels|safe }},cD={{ cat_data|safe }};
+if(cL.length&&document.getElementById('catChart'))
+  new Chart('catChart',{type:'doughnut',data:{labels:cL,datasets:[{data:cD,
+    backgroundColor:PAL,hoverBackgroundColor:PAL.map(c=>c+'cc'),borderWidth:0,hoverOffset:12}]},
+  options:{responsive:true,maintainAspectRatio:true,cutout:'58%',animation:anim,
+    plugins:{legend:{...leg()},tooltip:{...tip,callbacks:{
+      label:ctx=>` ${ctx.label}: ₹${Number(ctx.parsed).toLocaleString('en-IN',{minimumFractionDigits:2})}`}}}}});
+
+/* Chart 3 – last 12 months */
+const mL12={{ monthly12_labels|safe }},mD12={{ monthly12_data|safe }};
+new Chart('m12Chart',{type:'bar',data:{labels:mL12,datasets:[{label:'Monthly (₹)',data:mD12,
+  backgroundColor:mD12.map((_,i)=>i===mD12.length-1?PAL[0]:PAL[0]+'66'),
+  hoverBackgroundColor:PAL[0],borderWidth:0,borderRadius:6}]},
+  options:{responsive:true,maintainAspectRatio:true,animation:anim,
+    plugins:{legend:{display:false},tooltip:{...tip}},scales:scl}});
+
+/* Chart 4 – compare */
+const cmpL={{ compare_labels|safe }},cmpI={{ compare_income|safe }},cmpE={{ compare_expense|safe }},cmpS={{ compare_savings|safe }};
+new Chart('compareChart',{type:'bar',data:{labels:cmpL,datasets:[
+  {label:'Income',  data:cmpI,backgroundColor:'#10b98155',hoverBackgroundColor:'#10b981',borderColor:'#10b981',borderWidth:1,borderRadius:5},
+  {label:'Expenses',data:cmpE,backgroundColor:'#ef444455',hoverBackgroundColor:'#ef4444',borderColor:'#ef4444',borderWidth:1,borderRadius:5},
+  {label:'Savings', data:cmpS,backgroundColor:'#3b82f655',hoverBackgroundColor:'#3b82f6',borderColor:'#3b82f6',borderWidth:1,borderRadius:5}]},
+  options:{responsive:true,maintainAspectRatio:true,animation:anim,
+    plugins:{legend:{display:true,...leg('top')},tooltip:{...tip,callbacks:{
+      label:ctx=>` ${ctx.dataset.label}: ₹${Number(ctx.parsed.y).toLocaleString('en-IN',{minimumFractionDigits:2})}`}}},
+    scales:scl}});
+
+/* Chart 5 – all-time category bar */
+const atL={{ alltime_cat_labels|safe }},atD={{ alltime_cat_data|safe }};
+if(atL.length&&document.getElementById('catBarChart'))
+  new Chart('catBarChart',{type:'bar',data:{labels:atL,datasets:[{label:'Total Spent (₹)',data:atD,
+    backgroundColor:atL.map((_,i)=>PAL[i%PAL.length]+'77'),
+    hoverBackgroundColor:atL.map((_,i)=>PAL[i%PAL.length]),
+    borderColor:atL.map((_,i)=>PAL[i%PAL.length]),borderWidth:1,borderRadius:6}]},
+  options:{responsive:true,maintainAspectRatio:true,animation:anim,
+    plugins:{legend:{display:false},tooltip:{...tip}},
+    scales:{...scl,x:{...scl.x,ticks:{color:tc,font:{size:10},maxRotation:35}}}}});
+
+/* Chart 6 – member breakdown (family view) */
+const mnL={{ member_names|safe }},mnD={{ member_totals|safe }};
+if(mnL.length&&document.getElementById('memberChart'))
+  new Chart('memberChart',{type:'bar',data:{labels:mnL,datasets:[{
+    label:'Period Spending',data:mnD,
+    backgroundColor:mnL.map((_,i)=>PAL[i%PAL.length]+'88'),
+    hoverBackgroundColor:mnL.map((_,i)=>PAL[i%PAL.length]),
+    borderColor:mnL.map((_,i)=>PAL[i%PAL.length]),borderWidth:1,borderRadius:8}]},
+  options:{responsive:true,maintainAspectRatio:true,animation:anim,
+    plugins:{legend:{display:false},tooltip:{...tip,callbacks:{
+      label:ctx=>` ${ctx.label}: ₹${Number(ctx.parsed.y).toLocaleString('en-IN',{minimumFractionDigits:2})}`}}},
+    scales:scl}});
+</script>
+{% endblock %}

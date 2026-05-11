@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Expense Tracker{% endblock %} — FinTrack</title>
+  <meta name="description" content="Personal finance and expense tracking powered by AI insights.">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  {% block head %}{% endblock %}
+</head>
+<body>
+
+{% if session.get('user_id') %}
+<!-- Sidebar overlay (mobile) -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+<div class="layout">
+  <!-- ── Sidebar ─────────────────────────────── -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-logo">
+        <div class="brand-icon">💰</div>
+        <div class="brand-text">
+          <h1>FinTrack</h1>
+          <p>Smart Expense Tracker</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-user">
+      <div class="user-avatar">{{ session.username[0].upper() }}</div>
+      <div class="user-info">
+        <span>{{ session.username }}</span>
+        <small>{% if session.role == 'admin' %}Administrator{% else %}Member{% endif %}</small>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-label">Main</div>
+      <a href="{{ url_for('dashboard') }}" class="nav-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
+        <span class="icon">🏠</span> Dashboard
+      </a>
+
+      <div class="nav-label">Finance</div>
+      <a href="{{ url_for('expenses') }}" class="nav-item {% if 'expense' in request.endpoint %}active{% endif %}">
+        <span class="icon">💸</span> Expenses
+      </a>
+      <a href="{{ url_for('add_expense') }}" class="nav-item {% if request.endpoint == 'add_expense' %}active{% endif %}">
+        <span class="icon">➕</span> Add Expense
+      </a>
+      <a href="{{ url_for('income') }}" class="nav-item {% if 'income' in request.endpoint %}active{% endif %}">
+        <span class="icon">💵</span> Income
+      </a>
+      <a href="{{ url_for('add_income') }}" class="nav-item {% if request.endpoint == 'add_income' %}active{% endif %}">
+        <span class="icon">📥</span> Add Income
+      </a>
+      <a href="{{ url_for('savings') }}" class="nav-item {% if 'saving' in request.endpoint %}active{% endif %}">
+        <span class="icon">🏦</span> Savings
+      </a>
+
+      <div class="nav-label">Insights</div>
+      <a href="{{ url_for('family') }}" class="nav-item {% if request.endpoint == 'family' %}active{% endif %}">
+        <span class="icon">👨‍👩‍👧</span> Family View
+      </a>
+      <a href="{{ url_for('audit_trail') }}" class="nav-item {% if request.endpoint == 'audit_trail' %}active{% endif %}">
+        <span class="icon">🔍</span> Audit Trail
+      </a>
+      <a href="{{ url_for('export_pdf') }}" class="nav-item">
+        <span class="icon">📄</span> Export PDF
+      </a>
+
+      {% if session.role == 'admin' %}
+      <div class="nav-label">Admin</div>
+      <a href="{{ url_for('admin_panel') }}" class="nav-item {% if request.endpoint == 'admin_panel' %}active{% endif %}">
+        <span class="icon">🛡️</span> User Management
+      </a>
+      <a href="{{ url_for('email_config') }}" class="nav-item {% if request.endpoint == 'email_config' %}active{% endif %}">
+        <span class="icon">📧</span> Email Reminders
+      </a>
+      <a href="{{ url_for('admin_audit') }}" class="nav-item {% if request.endpoint == 'admin_audit' %}active{% endif %}">
+        <span class="icon">📋</span> Full Audit Log
+      </a>
+      {% endif %}
+    </nav>
+
+    <div class="sidebar-footer">
+      <a href="{{ url_for('logout') }}" class="nav-item">
+        <span class="icon">🚪</span> Logout
+      </a>
+    </div>
+  </aside>
+
+  <!-- ── Main ───────────────────────────────── -->
+  <div class="main">
+    <div class="topbar">
+      <div class="flex gap-3">
+        <button class="hamburger" onclick="toggleSidebar()" aria-label="Toggle menu">
+          <span></span><span></span><span></span>
+        </button>
+        <span class="topbar-title">{% block page_title %}Dashboard{% endblock %}</span>
+      </div>
+      <div class="topbar-actions">
+        <a href="{{ url_for('add_expense') }}" class="btn btn-primary btn-sm">+ Add Expense</a>
+      </div>
+    </div>
+
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-container">
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">
+              <span>{{ '✅' if category == 'success' else '⚠️' if category == 'warning' else '❌' if category == 'danger' else 'ℹ️' }}</span>
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <div class="page">
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+</div>
+
+{% else %}
+  <!-- Flash messages for auth pages -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div style="position:fixed;top:20px;right:20px;z-index:999;max-width:340px;">
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }}" style="box-shadow:var(--shadow);">
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+  {% block auth_content %}{% endblock %}
+{% endif %}
+
+<script>
+  function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+    document.getElementById('sidebarOverlay').classList.toggle('active');
+  }
+  // Auto-dismiss flashes after 4s
+  setTimeout(() => {
+    document.querySelectorAll('.alert').forEach(a => {
+      a.style.transition = 'opacity .5s';
+      a.style.opacity = '0';
+      setTimeout(() => a.remove(), 500);
+    });
+  }, 4000);
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

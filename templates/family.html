@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block title %}Family Expenses{% endblock %}
+{% block page_title %}Family Expenses{% endblock %}
+{% block content %}
+
+<!-- Members -->
+<div style="margin-bottom:24px;">
+  <h3 style="font-size:14px;font-weight:600;color:var(--text-muted);margin-bottom:12px;">👨‍👩‍👧 All Members</h3>
+  <div style="display:flex;flex-wrap:wrap;gap:12px;">
+    {% for m in members %}
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 20px;display:flex;align-items:center;gap:10px;">
+      <div class="user-avatar" style="width:32px;height:32px;font-size:13px;">{{ m.username[0].upper() }}</div>
+      <div>
+        <span style="font-weight:600;font-size:14px;">{{ m.username }}</span>
+        <small style="display:block;color:var(--text-muted);font-size:11px;">₹{{ "%.2f"|format(by_member.get(m.username,0)) }} spent</small>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="stat-card expense" style="max-width:280px;margin-bottom:24px;">
+  <div class="stat-icon">👨‍👩‍👧</div>
+  <div class="stat-label">Family Total Spending</div>
+  <div class="stat-value negative">₹{{ "%.2f"|format(total) }}</div>
+</div>
+
+<div class="table-card">
+  <div class="table-header">
+    <span class="table-title">📋 Combined Transactions</span>
+  </div>
+  {% if rows %}
+  <div style="overflow-x:auto;">
+    <table>
+      <thead><tr><th>Member</th><th>Date</th><th>Category</th><th>Description</th><th>Amount</th></tr></thead>
+      <tbody>
+        {% for item in rows %}
+        <tr>
+          <td>
+            <div class="flex gap-2">
+              <div class="user-avatar" style="width:26px;height:26px;font-size:11px;flex-shrink:0;">{{ item.user[0].upper() }}</div>
+              {{ item.user }}
+            </div>
+          </td>
+          <td style="color:var(--text-muted);">{{ item.expense.date.strftime('%d %b %Y') }}</td>
+          <td><span class="badge badge-primary">{{ item.expense.category }}</span></td>
+          <td>{{ item.expense.description or '—' }}</td>
+          <td class="text-danger" style="font-weight:700;">₹{{ "%.2f"|format(item.expense.amount) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state"><div class="icon">👨‍👩‍👧</div><p>No family expenses yet.</p></div>
+  {% endif %}
+</div>
+{% endblock %}

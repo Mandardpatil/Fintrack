@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% block title %}Add Expense{% endblock %}
+{% block page_title %}Add Expense{% endblock %}
+
+{% block content %}
+<div style="max-width:620px;">
+  <div class="card">
+    <h2 style="font-size:18px;font-weight:700;margin-bottom:24px;">💸 New Expense</h2>
+
+    <form method="POST" action="{{ url_for('add_expense') }}">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="exp-amount">Amount (₹) *</label>
+          <input id="exp-amount" class="form-control" type="number" name="amount"
+                 step="0.01" min="0.01" placeholder="0.00" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="exp-category">Category *</label>
+          <select id="exp-category" class="form-control" name="category" required>
+            <option value="" disabled selected>Select category</option>
+            {% for c in categories %}
+            <option value="{{ c }}">{{ c }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="exp-desc">Description</label>
+        <input id="exp-desc" class="form-control" type="text" name="description"
+               placeholder="What was this expense for?">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="exp-date">Date *</label>
+          <input id="exp-date" class="form-control" type="date" name="date"
+                 value="{{ today }}" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="exp-saved">Money Saved (₹)
+            <span style="color:var(--text-dim);font-weight:400;">(optional)</span>
+          </label>
+          <input id="exp-saved" class="form-control" type="number" name="saved_amount"
+                 step="0.01" min="0" placeholder="0.00"
+                 title="Amount saved by avoiding this or choosing a cheaper option">
+        </div>
+      </div>
+
+      <div style="padding:12px 16px;background:rgba(245,158,11,.08);border-radius:8px;border:1px solid rgba(245,158,11,.2);margin-bottom:20px;">
+        <p style="font-size:12px;color:var(--text-muted);">
+          🤖 <strong>AI Tip:</strong> Categories like <em>Entertainment, Shopping, Hotel, Movie, Travel</em>
+          are automatically flagged as potentially unnecessary. The ML engine will also detect
+          anomalous amounts across all your expenses.
+        </p>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-primary" type="submit" id="btn-save-exp">💾 Save Expense</button>
+        <a href="{{ url_for('expenses') }}" class="btn btn-ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

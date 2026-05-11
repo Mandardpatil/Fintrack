@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% block title %}Admin Panel{% endblock %}
+{% block page_title %}Admin Panel{% endblock %}
+
+{% block content %}
+
+<div class="table-card">
+  <div class="table-header">
+    <span class="table-title">🛡️ User Management
+      <span class="badge badge-muted" style="margin-left:8px;">{{ users|length }} users</span>
+    </span>
+  </div>
+
+  <div style="overflow-x:auto;">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Username</th>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Family ID</th>
+          <th>Status</th>
+          <th>Registered</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td style="color:var(--text-dim);">{{ u.id }}</td>
+          <td>
+            <div class="flex gap-2">
+              <div class="user-avatar" style="width:28px;height:28px;font-size:12px;flex-shrink:0;">{{ u.username[0].upper() }}</div>
+              <strong>{{ u.username }}</strong>
+            </div>
+          </td>
+          <td style="color:var(--text-muted);">{{ u.email }}</td>
+          <td>
+            {% if u.role == 'admin' %}
+              <span class="badge badge-warning">👑 Admin</span>
+            {% else %}
+              <span class="badge badge-muted">User</span>
+            {% endif %}
+          </td>
+          <td>{{ u.family_id or '—' }}</td>
+          <td>
+            {% if u.is_approved %}
+              <span class="badge badge-success">✅ Approved</span>
+            {% else %}
+              <span class="badge badge-danger">⏳ Pending</span>
+            {% endif %}
+          </td>
+          <td style="color:var(--text-muted);font-size:12px;">{{ u.created_at.strftime('%d %b %Y') }}</td>
+          <td>
+            {% if not u.is_approved %}
+            <div class="flex gap-2">
+              <form method="POST" action="{{ url_for('approve_user', uid=u.id) }}" style="display:inline;">
+                <button class="btn btn-success btn-sm" type="submit" id="btn-approve-{{ u.id }}">✅ Approve</button>
+              </form>
+              <form method="POST" action="{{ url_for('reject_user', uid=u.id) }}"
+                    onsubmit="return confirm('Permanently remove this user?');" style="display:inline;">
+                <button class="btn btn-danger btn-sm" type="submit" id="btn-reject-{{ u.id }}">❌ Reject</button>
+              </form>
+            </div>
+            {% else %}
+              <span style="color:var(--text-dim);font-size:12px;">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

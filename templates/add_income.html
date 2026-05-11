@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block title %}Add Income{% endblock %}
+{% block page_title %}Add Income{% endblock %}
+
+{% block content %}
+<div style="max-width:520px;">
+  <div class="card">
+    <h2 style="font-size:18px;font-weight:700;margin-bottom:24px;">💵 Record Income</h2>
+
+    <form method="POST" action="{{ url_for('add_income') }}">
+      <div class="form-group">
+        <label class="form-label" for="inc-amount">Amount (₹) *</label>
+        <input id="inc-amount" class="form-control" type="number" name="amount"
+               step="0.01" min="0.01" placeholder="0.00" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="inc-source">Source</label>
+        <input id="inc-source" class="form-control" type="text" name="source"
+               placeholder="e.g. Salary, Freelance, Rental…">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="inc-date">Date *</label>
+        <input id="inc-date" class="form-control" type="date" name="date"
+               value="{{ today }}" required>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-success" type="submit" id="btn-save-inc">💾 Save Income</button>
+        <a href="{{ url_for('income') }}" class="btn btn-ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
