@@ -1,3 +1,4 @@
+````md
 # FinTrack — Family Expense Tracker
 
 A modern and secure Family Expense Tracker application built using Flask, SQLite, HTML5, CSS, and Vanilla JavaScript. FinTrack helps families efficiently manage expenses, income, savings goals, and financial analytics through an intuitive dashboard and responsive UI.
@@ -6,18 +7,18 @@ A modern and secure Family Expense Tracker application built using Flask, SQLite
 
 # Features
 
-* Expense tracking and categorization
-* Income management
-* Savings goal tracking
-* Interactive analytics dashboard
-* Monthly spending insights
-* Secure user authentication
-* Admin and user role management
-* Immutable audit logging
-* Daily reminder email scheduling
-* PDF report export support
-* Responsive mobile-friendly design
-* Dark mode glassmorphism UI
+- Expense tracking and categorization
+- Income management
+- Savings goal tracking
+- Interactive analytics dashboard
+- Monthly spending insights
+- Secure user authentication
+- Admin and user role management
+- Immutable audit logging
+- Daily reminder email scheduling
+- PDF report export support
+- Responsive mobile-friendly design
+- Dark mode glassmorphism UI
 
 ---
 
@@ -40,7 +41,7 @@ Browser  ──→  Flask Routes (app.py)
               APScheduler Background Jobs
                           │
                     SMTP Email Service
-```
+````
 
 ---
 
@@ -123,13 +124,13 @@ Powered by Chart.js for interactive visual reporting.
 
 FinTrack uses APScheduler for automated daily reminders.
 
-### Scheduled Tasks
+## Scheduled Tasks
 
 * Expense reminders
 * Savings alerts
 * Budget notifications
 
-### Email Technology
+## Email Technology
 
 * Gmail SMTP
 * STARTTLS Encryption
@@ -142,8 +143,8 @@ FinTrack uses APScheduler for automated daily reminders.
 ## Clone Repository
 
 ```bash
-git clone https://github.com/yourusername/fintrack.git
-cd fintrack
+git clone https://github.com/Mandardpatil/FinTrack.git
+cd FinTrack
 ```
 
 ## Create Virtual Environment
@@ -193,11 +194,13 @@ http://127.0.0.1:5000
 # Project Structure
 
 ```text
-fintrack/
+FinTrack/
 │
 ├── app.py
 ├── requirements.txt
 ├── email_config.json
+├── README.md
+│
 ├── instance/
 │   └── expense_tracker.db
 │
@@ -216,6 +219,9 @@ fintrack/
 │       └── dashboard.js
 │
 └── screenshots/
+    ├── dashboard.png
+    ├── expense.png
+    └── income.png
 ```
 
 ---
@@ -245,17 +251,17 @@ fintrack/
 
 # Screenshots
 
-Add screenshots inside:
+## Dashboard
 
-```text
-/screenshots
-```
-
-Example:
-
-```md
 ![Dashboard](screenshots/dashboard.png)
-```
+
+## Expense Management
+
+![Expense](screenshots/expenses.png)
+
+## Income Management
+
+![Income](screenshots/income.png)
 
 ---
 
@@ -270,4 +276,6 @@ This project is developed for educational and personal finance management purpos
 Mandar Patil
 
 MBA AIML | AI & Full Stack Development Enthusiast | Banking Technology Professional
-"# Fintrack" 
+
+```
+```
